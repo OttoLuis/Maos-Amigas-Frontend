@@ -15,7 +15,7 @@ O projeto oferece uma interface para autenticação de usuários, consulta de ps
 - **Página inicial:** acesso às principais funcionalidades da plataforma.
 - **Psicólogos:** visualização dos profissionais disponíveis.
 - **Consultas:** acesso às funcionalidades relacionadas aos agendamentos.
-- **Chat com inteligência artificial:** interface de conversação integrada ao serviço de IA do back-end.
+- **Chat com inteligência artificial:** interface integrada ao agente Agno, com autenticação JWT, consulta de profissionais/horários e confirmação explícita de reservas pendentes.
 - **Integração com API REST:** comunicação com o back-end para consumir os serviços da aplicação.
 - **Navegação entre páginas:** gerenciamento de rotas com React Router.
 
@@ -87,9 +87,10 @@ Crie um arquivo `.env` na raiz do projeto:
 
 ```env
 VITE_API_URL=http://localhost:8080
+VITE_AGNO_API_URL=http://localhost:8000
 ```
 
-Essa configuração pressupõe que o serviço Axios utiliza a variável `VITE_API_URL`. Caso o arquivo `src/services/api.js` utilize outra configuração, ajuste-o para ler essa variável.
+O front-end utiliza `VITE_API_URL` para a API Spring Boot e `VITE_AGNO_API_URL` para o serviço Agno (chat e confirmação de reservas). O arquivo [`.env.example`](.env.example) contém os valores locais padrão.
 
 Não coloque senhas, tokens privados ou chaves de API nesse arquivo. Variáveis `VITE_*` são incorporadas ao código disponibilizado no navegador e não devem conter segredos.
 
@@ -155,11 +156,11 @@ vite.config.js
 
 ## Integração com o back-end
 
-O front-end consome os endpoints REST disponibilizados pela API do Mãos Amigas, desenvolvida com Java e Spring Boot.
+O front-end consome a API Spring Boot (autenticação, profissionais e consultas) e o serviço Agno (conversa com o agente e confirmação de reserva).
 
 O endereço local padrão da API é `http://localhost:8080`. Para executar a aplicação completa, o back-end e seus serviços necessários devem estar configurados e em execução.
 
-A configuração de CORS do back-end também deve permitir a origem utilizada pelo front-end.
+A API Spring Boot e o serviço Agno devem permitir a origem utilizada pelo front-end. No Agno, configure `AGNO_CORS_ORIGINS`; no Spring Boot, configure `CORS_ORIGINS`.
 
 Repositório do back-end:
 
