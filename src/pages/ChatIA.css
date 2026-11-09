@@ -1028,3 +1028,19 @@
     transition: none !important;
   }
 }
+
+/* Reserva aguardando confirmação do usuário */
+.chat-reservation-pending {
+  color: var(--sage-700);
+  background: var(--sage-100);
+}
+
+.chat-reservation-pending button {
+  color: #fff;
+  background: var(--sage-700);
+  border-color: var(--sage-700);
+}
+
+.chat-reservation-pending button:hover:not(:disabled) {
+  background: #244a3a;
+}
