@@ -33,44 +33,36 @@ const textosVazios = {
   },
 };
 
-function dataLocalISO() {
-  const agora = new Date();
-  const ano = agora.getFullYear();
-  const mes = String(agora.getMonth() + 1).padStart(2, "0");
-  const dia = String(agora.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
-}
-
 function categoriaConsulta(consulta) {
   const status = String(consulta.status || "").toUpperCase();
 
-  if (status.includes("CANCEL")) return "canceladas";
+  if (status === "CANCELADA") return "canceladas";
+  if (status === "CONCLUIDA") return "realizadas";
+  if (status === "AGENDADA" || status === "CONFIRMADA") return "proximas";
+  return null;
+}
 
-  if (
-    status.includes("REALIZ") ||
-    status.includes("CONCLU") ||
-    status.includes("FINALIZ")
-  ) {
-    return "realizadas";
-  }
+function consultaPodeCancelar(consulta) {
+  const status = String(consulta.status || "").toUpperCase();
 
-  if (consulta.data && consulta.data < dataLocalISO()) {
-    return "realizadas";
-  }
+  if (status !== "AGENDADA" && status !== "CONFIRMADA") return false;
+  if (!consulta.data || !consulta.hora) return false;
 
-  return "proximas";
+  const dataHora = new Date(`${consulta.data}T${consulta.hora}`);
+  return !Number.isNaN(dataHora.getTime()) && dataHora > new Date();
 }
 
 function rotuloConsulta(consulta) {
   const status = String(consulta.status || "").toUpperCase();
 
-  if (status.includes("CANCEL")) return "Cancelada";
-  if (status.includes("REALIZ")) return "Realizada";
-  if (status.includes("CONCLU")) return "Concluída";
-  if (status.includes("FINALIZ")) return "Finalizada";
-  if (status.includes("CONFIRM")) return "Confirmada";
+  const rotulos = {
+    AGENDADA: "Agendada",
+    CONFIRMADA: "Confirmada",
+    CANCELADA: "Cancelada",
+    CONCLUIDA: "Concluída",
+  };
 
-  return "Agendada";
+  return rotulos[status] || "Status desconhecido";
 }
 
 // Aceita "2026-10-12" e devolve { ano, mes, dia } ou null
@@ -138,6 +130,8 @@ export default function Consultas() {
   const [erro, setErro] = useState("");
   const [tentativa, setTentativa] = useState(0);
   const [mensagem, setMensagem] = useState(location.state?.mensagem || "");
+  const [acaoErro, setAcaoErro] = useState("");
+  const [cancelandoId, setCancelandoId] = useState(null);
 
   // Guarda a mensagem e limpa o state da rota, para não reaparecer ao recarregar
   useEffect(() => {
@@ -177,7 +171,8 @@ export default function Consultas() {
   const contagem = useMemo(() => {
     const total = { proximas: 0, realizadas: 0, canceladas: 0 };
     consultas.forEach((c) => {
-      total[categoriaConsulta(c)] += 1;
+      const categoria = categoriaConsulta(c);
+      if (categoria) total[categoria] += 1;
     });
     return total;
   }, [consultas]);
@@ -192,6 +187,53 @@ export default function Consultas() {
         : chaveOrdem(b).localeCompare(chaveOrdem(a))
     );
   }, [consultas, aba]);
+
+  async function cancelarConsulta(consulta) {
+    if (cancelandoId !== null) return;
+
+    const confirmado = window.confirm(
+      `Deseja realmente cancelar a consulta com ${consulta.psicologo || "este profissional"}?`
+    );
+
+    if (!confirmado) return;
+
+    try {
+      setCancelandoId(consulta.id);
+      setAcaoErro("");
+      const resposta = await api.patch(`/consulta/${consulta.id}/cancelar`);
+
+      setConsultas((atuais) =>
+        atuais.map((item) =>
+          item.id === consulta.id ? resposta.data : item
+        )
+      );
+
+      setMensagem("Consulta cancelada com sucesso.");
+      setAba("canceladas");
+    } catch (error) {
+      const status = error.response?.status;
+
+      if (status === 401) {
+        setAcaoErro("Sua sessão expirou. Entre novamente para cancelar a consulta.");
+      } else if (status === 403) {
+        setAcaoErro("Você não tem permissão para cancelar esta consulta.");
+      } else if (status === 404) {
+        setAcaoErro("Consulta não encontrada ou não pertence à sua conta.");
+      } else if (status === 409) {
+        setAcaoErro(
+          error.response?.data?.message ||
+          "Esta consulta não pode mais ser cancelada."
+        );
+      } else {
+        setAcaoErro(
+          error.response?.data?.message ||
+          "Não foi possível cancelar a consulta. Tente novamente."
+        );
+      }
+    } finally {
+      setCancelandoId(null);
+    }
+  }
 
   function aoTeclarNasAbas(event) {
     const atual = abas.findIndex((item) => item.chave === aba);
@@ -216,6 +258,11 @@ export default function Consultas() {
       subtitle="Acompanhe seus atendimentos e mantenha o histórico em um só lugar."
     >
       <div className="con-page">
+        {acaoErro && (
+          <div className="con-action-error" role="alert">
+            {acaoErro}
+          </div>
+        )}
         {mensagem && (
           <div className="con-success" role="status">
             <span>{mensagem}</span>
@@ -342,6 +389,18 @@ export default function Consultas() {
 
                       {consulta.observacao && (
                         <p className="con-observacao">{consulta.observacao}</p>
+                      )}
+                      {consultaPodeCancelar(consulta) && (
+                        <button
+                          type="button"
+                          className="con-cancel-button"
+                          disabled={cancelandoId === consulta.id}
+                          onClick={() => cancelarConsulta(consulta)}
+                        >
+                          {cancelandoId === consulta.id
+                            ? "Cancelando..."
+                            : "Cancelar consulta"}
+                        </button>
                       )}
                     </div>
 

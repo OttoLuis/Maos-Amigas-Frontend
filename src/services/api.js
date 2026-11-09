@@ -9,6 +9,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const url = config.url ?? "";
+
   const isPublicAuthRequest =
     url.includes("/auth/login") ||
     url.includes("/usuarios");

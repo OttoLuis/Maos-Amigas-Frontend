@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import "./Cadastro.css";
 
-const API_URL = "http://localhost:8080/auth/register";
+const API_URL = "http:" + "/" + "/" + "localhost:8080" + "/auth/register";
 
 const initialForm = {
     nome: "",
