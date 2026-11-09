@@ -66,7 +66,7 @@ O back-end Spring Boot deve estar em execução para utilizar as funcionalidades
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/OttinLuis/Maos-Amigas-Frontend.git
+git clone https://github.com/OttoLuis/Maos-Amigas-Frontend.git
 ```
 
 ### 2. Entrar na pasta do projeto
@@ -164,7 +164,7 @@ A API Spring Boot e o serviço Agno devem permitir a origem utilizada pelo front
 
 Repositório do back-end:
 
-https://github.com/OttinLuis/Maos-Amigas
+https://github.com/OttoLuis/Maos-Amigas
 
 ## Executar com Docker
 
@@ -182,6 +182,6 @@ O projeto também permite aplicar conhecimentos de desenvolvimento web, integra�
 
 **Otto Luis**
 
-GitHub: https://github.com/OttinLuis
+GitHub: https://github.com/OttoLuis
 
-Repositório do front-end: https://github.com/OttinLuis/Maos-Amigas-Frontend
+Repositório do front-end: https://github.com/OttoLuis/Maos-Amigas-Frontend
