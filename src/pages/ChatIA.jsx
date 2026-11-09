@@ -8,6 +8,7 @@ import "./ChatIA.css";
 const LOGO = "/logo-maos-amigas.png";
 const LIMITE = 2000;
 const TIMEOUT_MS = 45000;
+const AGNO_API_URL = import.meta.env.VITE_AGNO_API_URL || "http://localhost:8000";
 const ID_INICIAL = "inicial";
 
 class RespostaInvalidaError extends Error {}
@@ -142,6 +143,8 @@ export default function ChatIA() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [copiadoId, setCopiadoId] = useState(null);
+  const [reservaPendente, setReservaPendente] = useState(null);
+  const [confirmandoReserva, setConfirmandoReserva] = useState(false);
   const listaRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -184,10 +187,14 @@ export default function ChatIA() {
 
     try {
       const response = await api.post(
-        "/ia/chat",
+        `${AGNO_API_URL}/agentes/acolhimento`,
         { mensagem },
         { timeout: TIMEOUT_MS }
       );
+
+      if (response.data?.reserva_pendente?.id) {
+        setReservaPendente(response.data.reserva_pendente);
+      }
 
       const resposta =
         response.data?.resposta ??
@@ -244,11 +251,51 @@ export default function ChatIA() {
     }
   }
 
+  async function confirmarReserva() {
+    if (!reservaPendente?.id || confirmandoReserva) return;
+
+    setConfirmandoReserva(true);
+    setErro("");
+
+    try {
+      const response = await api.post(
+        `${AGNO_API_URL}/agentes/acolhimento/confirmar`,
+        { reserva_id: reservaPendente.id },
+        { timeout: TIMEOUT_MS }
+      );
+
+      setMensagens((anteriores) => [
+        ...anteriores,
+        {
+          id: Date.now(),
+          role: "assistant",
+          hora: hora(),
+          content: response.data?.mensagem || "Consulta confirmada com sucesso.",
+        },
+      ]);
+      setReservaPendente(null);
+    } catch (error) {
+      const status = error.response?.status;
+      const mensagemErro = status === 409
+        ? "Esse horário acabou de ficar indisponível. Peça ao assistente para consultar outros horários."
+        : status === 410
+          ? "A reserva expirou. Consulte os horários novamente para criar uma nova reserva."
+          : status === 401
+            ? "Sua sessão expirou. Entre novamente na sua conta."
+            : error.response?.data?.detail || "Não foi possível confirmar a consulta. Tente novamente.";
+      setErro(mensagemErro);
+      if (status === 409 || status === 410) setReservaPendente(null);
+    } finally {
+      setConfirmandoReserva(false);
+    }
+  }
+
   function novaConversa() {
-    if (carregando) return;
+    if (carregando || confirmandoReserva) return;
     setMensagens([criarMensagemInicial()]);
     setErro("");
     setTexto("");
+    setReservaPendente(null);
     inputRef.current?.focus();
   }
 
@@ -455,6 +502,19 @@ export default function ChatIA() {
                     <span className="chat-dot" aria-hidden="true" />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {reservaPendente && (
+              <div className="chat-error chat-reservation-pending" role="status">
+                <p><strong>Reserva aguardando sua confirmação.</strong> O horário fica reservado temporariamente por até 10 minutos. A consulta ainda não foi agendada.</p>
+                <button
+                  type="button"
+                  onClick={confirmarReserva}
+                  disabled={confirmandoReserva}
+                >
+                  {confirmandoReserva ? "Confirmando..." : "Confirmar consulta"}
+                </button>
               </div>
             )}
 
